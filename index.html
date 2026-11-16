@@ -92928,6 +92928,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   function createHud({ canvas, ctx: injectedCtx = null, options = null } = {}) {
     const ctx = injectedCtx || (canvas && canvas.getContext ? canvas.getContext("2d") : null);
     const opt = { ...defaultHudOptions(), ...options || {} };
+    const P = (c) => opt.noPanels ? "rgba(0,12,6,0)" : c;
     const S = {
       mode: "pilot",
       visible: true,
@@ -92982,7 +92983,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       ctx.moveTo(x1, y1);
       ctx.lineTo(x2, y2);
     };
-    const box = (x, y, w, h, color, fill = "rgba(0,12,6,0.82)") => {
+    const box = (x, y, w, h, color, fill = P("rgba(0,12,6,0.82)")) => {
       ctx.beginPath();
       ctx.rect(x, y, w, h);
       ctx.fillStyle = fill;
@@ -92993,7 +92994,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     };
     const bar = (x, y, w, h, frac, color) => {
       frac = clamp4(frac, 0, 1);
-      ctx.fillStyle = "rgba(0,12,6,0.6)";
+      ctx.fillStyle = P("rgba(0,12,6,0.6)");
       ctx.fillRect(x, y, w, h);
       ctx.fillStyle = color;
       ctx.fillRect(x, y, w * frac, h);
@@ -93234,7 +93235,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       const pt2 = (deg, r) => [x - Math.cos(deg * D2R2) * r, y + Math.sin(deg * D2R2) * r];
       ctx.beginPath();
       ctx.rect(x - R - 30 * u, y - 14 * u, R + 56 * u, R + 54 * u);
-      ctx.fillStyle = "rgba(0,12,6,0.45)";
+      ctx.fillStyle = P("rgba(0,12,6,0.45)");
       ctx.fill();
       line2(() => {
         ctx.beginPath();
@@ -93277,7 +93278,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       const W = 112 * u, Hh = 92 * u;
       ctx.beginPath();
       ctx.rect(x - W / 2, y - Hh / 2 - 12 * u, W, Hh + 44 * u);
-      ctx.fillStyle = "rgba(0,12,6,0.45)";
+      ctx.fillStyle = P("rgba(0,12,6,0.45)");
       ctx.fill();
       line2(seg(x, y - 34 * u, x, y + 36 * u), col, 2 * u);
       line2(seg(x - 38 * u, y - 2 * u, x + 38 * u, y - 2 * u), col, 2 * u);
@@ -93358,7 +93359,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     const drawWind = (x, y, u) => {
       ctx.beginPath();
       ctx.arc(x, y, 30 * u, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(0,12,6,0.45)";
+      ctx.fillStyle = P("rgba(0,12,6,0.45)");
       ctx.fill();
       line2(() => {
         ctx.beginPath();
@@ -93390,7 +93391,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       const w = 90 * u;
       ctx.beginPath();
       ctx.rect(cx - w / 2, y - 6 * u, w, 12 * u);
-      ctx.fillStyle = "rgba(0,12,6,0.4)";
+      ctx.fillStyle = P("rgba(0,12,6,0.4)");
       ctx.fill();
       ctx.strokeStyle = col;
       ctx.lineWidth = 1.2;
@@ -93422,7 +93423,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     };
     const drawReduced = (u) => {
       const W = S.W, H = S.H, bw = Math.min(W - 24, 880 * u), x0 = (W - bw) / 2, h = 62 * u, y0 = H - h - 12 * u;
-      ctx.fillStyle = "rgba(0,10,5,0.55)";
+      ctx.fillStyle = P("rgba(0,10,5,0.55)");
       ctx.fillRect(x0, y0, bw, h);
       ctx.lineWidth = 1.2;
       ctx.strokeStyle = col;
@@ -95153,23 +95154,23 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     const lod = new PerspectiveCamera(100, 1, 0.1, 6e3);
     const tmpV = new Vector3(), tmpQ = new Quaternion();
     const prevBtn = {};
-    let saved = null, hudPlane = null, hudTex = null, hud = null, controllers = [];
+    let hudAcc = 0, hudN = 0, saved = null, hudPlane = null, hudTex = null, hud = null, controllers = [];
     renderer.xr.enabled = true;
     renderer.xr.setReferenceSpaceType("local");
     function buildHud() {
       const cv = document.createElement("canvas");
       cv.width = 1280;
       cv.height = 720;
-      hud = createHud({ canvas: cv, options: hudOptions });
+      hud = createHud({ canvas: cv, options: { ...hudOptions, noPanels: true } });
       hud.resize(1280, 720, 1);
       hud.setMode("pilot");
       hudTex = new CanvasTexture(cv);
       hudTex.colorSpace = SRGBColorSpace;
       const m = new MeshBasicMaterial({ map: hudTex, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
-      hudPlane = new Mesh(new PlaneGeometry(2.3, 1.294), m);
+      hudPlane = new Mesh(new PlaneGeometry(4.2, 2.36), m);
       hudPlane.renderOrder = 999;
       hudPlane.frustumCulled = false;
-      hudPlane.position.set(0, 0.02, -2.1);
+      hudPlane.position.set(0, 0.04, -4);
       dolly.add(hudPlane);
     }
     function buildControllers() {
@@ -95209,10 +95210,16 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       if (vr.presenting || !navigator.xr) return false;
       vr.prepare();
       const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
-      saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near };
+      saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near, far: camera.far, q: { ...game2.scene._q } };
       renderer.shadowMap.enabled = false;
       game2.scene.sun.castShadow = false;
-      renderer.xr.setFramebufferScaleFactor(0.8);
+      try {
+        game2.scene.setQuality({ viewDistance: 1600, treeDensity: Math.min(saved.q.treeDensity || 1, 0.35), grassDensity: 0, grassDistance: 0, lodK: 1, detail: 0.6, tree3D: 30, rock3D: 20, buildBudget: 1 });
+      } catch (e) {
+        console.warn("VR quality", e);
+      }
+      game2.model.setLite && game2.model.setLite(true);
+      renderer.xr.setFramebufferScaleFactor(0.75);
       camera.near = 0.1;
       camera.updateProjectionMatrix();
       dolly.add(camera);
@@ -95240,6 +95247,13 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
         renderer.shadowMap.enabled = saved.shadows;
         game2.scene.sun.castShadow = saved.sunShadow;
         camera.near = saved.near;
+        try {
+          game2.scene.setQuality(saved.q);
+        } catch (e) {
+          console.warn(e);
+        }
+        camera.far = saved.far;
+        game2.model.setLite && game2.model.setLite(false);
         saved = null;
       }
       camera.updateProjectionMatrix();
@@ -95275,8 +95289,10 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
         for (const src of vr.session.inputSources) if (src.gamepad && src.handedness) pads[src.handedness] = src.gamepad;
       }
       applyXRInput(pads, prevBtn, dt, input2);
-      if (hud) {
-        hud.update(state, controls, dt);
+      hudAcc += dt;
+      if (hud && (++hudN & 1) === 0) {
+        hud.update(state, controls, hudAcc);
+        hudAcc = 0;
         hudTex.needsUpdate = true;
       }
     };
@@ -95332,6 +95348,10 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       this._v = new Vector3();
       for (const n of ["NozzleFront", "NozzleRear"]) if (this.parts[n]) this.parts[n].rotation.order = "XYZ";
       this.missing = ["NoseWheel", "NoseGearLeg", "MainWheelL", "MainWheelR", "MainGearLeg", "OutriggerLegL", "OutriggerLegR", "OutriggerWheelL", "OutriggerWheelR", "NozzleFront", "NozzleRear"].filter((n) => !this.parts[n]);
+    }
+    /** Modo VR: oculta el tren (el piloto no lo ve desde la cabina) para ahorrar ~65 mil triángulos por ojo. */
+    setLite(on) {
+      for (const u of Object.values(this.units)) for (const n of [u.leg, ...u.wheels]) if (this.parts[n]) this.parts[n].visible = !on;
     }
     setEye(v) {
       if (Array.isArray(v)) this.eyeLocal.set(v[0], v[1], v[2]);
@@ -95507,10 +95527,16 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       let camPos, mode = g.rig.mode;
       if (inVR) {
         g.vr.update(dt, s, c, g.model);
-        const real = g.scene.camera;
-        g.scene.camera = g.vr.lodCamera(real.far);
-        g.scene.update(dt, g.vr.headWorld(g.focus));
-        g.scene.camera = real;
+        g.vrAcc = (g.vrAcc || 0) + dt;
+        g.vrN = (g.vrN || 0) + 1;
+        g.vr.headWorld(g.focus);
+        if (g.vrN % 3 === 0) {
+          const real = g.scene.camera;
+          g.scene.camera = g.vr.lodCamera(real.far);
+          g.scene.update(g.vrAcc, g.focus);
+          g.scene.camera = real;
+          g.vrAcc = 0;
+        }
         camPos = [g.focus.x, g.focus.y, g.focus.z];
         mode = "pilot";
       } else {
