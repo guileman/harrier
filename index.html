@@ -70922,7 +70922,7 @@ float pFade = 1.0 - smoothstep(5.0, 16.0, length(vViewPosition));`).replace("#in
     satZoomMax: a = 19,
     onProgress: l,
     signal: c,
-    tileTimeoutMs: ttm = 6e4,
+    maxTiles: mxT = 150, tileTimeoutMs: ttm = 6e4,
     tileRetries: trt = 2,
     backoffMs: bkm = 400,
     concurrency: ccy = 8,
@@ -70946,7 +70946,7 @@ float pFade = 1.0 - smoothstep(5.0, 16.0, length(vViewPosition));`).replace("#in
     let O = t.map((_t) => R.toLocal(_t.lon, _t.lat)), z = R.lat0, H = i2.info || {}, k2 = Math.max(1, Math.min(a, H.maxSatZoom ?? 19)), j = Math.max(D, U) / 4096, mt = Math.max(1, k2), G2 = null;
     for (let _t = k2; _t >= 1; _t--) {
       let te = tileRangeForBounds(R, L, _t, 3);
-      if (mt = _t, G2 = te, te.count <= 150 && tileMetersPerPixel(z, _t) >= j * 0.5)
+      if (mt = _t, G2 = te, te.count <= mxT && tileMetersPerPixel(z, _t) >= j * 0.5)
         break;
     }
     let { tx0: J, ty0: q, tx1: K, ty1: Z } = G2, at = K - J + 1, Pt = Z - q + 1, gt = at * 256, yt = Pt * 256, St = new Uint8ClampedArray(gt * yt * 4), tt = [];
@@ -94589,7 +94589,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
     const margin = Math.max(500, (cfg.extentKm || 3) * 1e3);
     const L2 = runwayLengthM(cfg);
     return {
-      aoi: { closed: false, roadWidth: cfg.runway.widthM || 45, margin, maxSide: Math.max(4e3, 2 * margin + L2 + 400), wantOSM: cfg.source === "real" },
+      aoi: { closed: false, roadWidth: cfg.runway.widthM || 45, margin, maxSide: Math.max(4e3, 2 * margin + L2 + 400), wantOSM: cfg.source === "real", ...cfg.maxTiles ? { maxTiles: cfg.maxTiles } : {} },
       world: {
         seed: 1,
         pipeline: "v2",
@@ -95441,7 +95441,9 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       view.innerHTML = "";
     }
   }
+  var LITE = /OculusBrowser|Quest/i.test(navigator.userAgent) || new URLSearchParams(location.search).has("lite");
   async function startFlight(cfg) {
+    if (LITE) cfg = { ...cfg, quality: "bajo", extentKm: Math.min(cfg.extentKm || 3, 2), maxTiles: 30 };
     stopGame();
     ui.showLoading("Preparando el vuelo\u2026", 0);
     audio.setVolume(cfg.audio ? cfg.audio.volume : 0.7);
