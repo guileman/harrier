@@ -95214,6 +95214,12 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       try {
         vr.prepare();
         try {
+          const gl = renderer.getContext();
+          if (gl && gl.makeXRCompatible) await gl.makeXRCompatible();
+        } catch (e0) {
+          console.warn("makeXRCompatible", e0);
+        }
+        try {
           session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
         } catch (e1) {
           if (!(e1 && e1.name === "NotSupportedError")) throw e1;
@@ -95444,6 +95450,13 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   };
 
   // src/main.js
+  {
+    const gc = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(type, attrs) {
+      if (type === "webgl2" || type === "webgl" || type === "experimental-webgl") attrs = { ...attrs || {}, xrCompatible: true };
+      return gc.call(this, type, attrs);
+    };
+  }
   var E2 = window.RallyEngine;
   var root = document.getElementById("ui");
   var view = document.getElementById("view");
