@@ -93930,6 +93930,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       const sm2 = rwSummary();
       const status = h("div", { class: "hz-status " + (sm2.r.valid ? "ok" : "bad"), text: sm2.r.valid ? sm2.text + " \xB7 fuente " + (settings.source === "real" ? "real" : "demo") : `La pista mide ${comma(sm2.r.lengthM, 0)} m: el m\xEDnimo es ${MIN_RUNWAY_LENGTH_M} m. Corregila en \xABPista y ubicaci\xF3n\xBB.` });
       const go_ = btn2("Iniciar vuelo", () => start(), { cls: "primary" });
+      const goVR = btn2("Iniciar en modo VR", () => start({ vr: true }), { sub: "Carga el mundo y te pide entrar en VR" });
       const el = panel(
         "Preparaci\xF3n del vuelo",
         "Condici\xF3n inicial y ayudas. Los ajustes se guardan.",
@@ -93958,12 +93959,12 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
           settings.assist.hoverDamping = v;
           save();
         } }), "Ayuda opcional: el GR.3 real tiene control limitado."),
-        h("div", { class: "hz-actions" }, go_, backBtn()),
+        h("div", { class: "hz-actions" }, go_, goVR, backBtn()),
         footer()
       );
       return { el, focus: go_ };
     };
-    function start() {
+    function start(opts) {
       const r = computeRunway(settings.runway.thr1, settings.runway.thr2, settings.runway.magVarDeg);
       if (!r.valid) {
         toast(`Pista demasiado corta (m\xEDn. ${MIN_RUNWAY_LENGTH_M} m)`);
@@ -93979,7 +93980,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       hideAll();
       api.showLoading("Preparando el vuelo\u2026", 0);
       setInputEnabled(false);
-      emit("start", cfg);
+      emit("start", opts && opts.vr ? { ...cfg, vr: true } : cfg);
     }
     screens.runway = () => {
       const draft = { thr1: { ...settings.runway.thr1 }, thr2: { ...settings.runway.thr2 } };
@@ -95510,6 +95511,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       game.last = performance.now();
       scene.renderer.setAnimationLoop(loop);
       showVrButton();
+      if (cfg.vr) vrGate();
     } catch (e) {
       console.error(e);
       ui.toast("Error al generar el mundo: " + (e && e.message || e), 8e3);
@@ -95594,6 +95596,48 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       }
       setInterval(upd, 4e3);
     }
+  }
+  function vrGate() {
+    if (!game) return;
+    game.paused = true;
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(4,14,10,.82);color:#d6ffe6;font:16px system-ui,sans-serif;text-align:center;padding:24px";
+    const t = document.createElement("div");
+    t.style.cssText = "font-size:22px;font-weight:700";
+    t.textContent = "Mundo listo";
+    const m = document.createElement("div");
+    m.style.cssText = "max-width:520px;opacity:.85";
+    m.textContent = "Conect\xE1 el visor, toc\xE1 el bot\xF3n y reci\xE9n entonces pon\xE9telo.";
+    const b = document.createElement("button");
+    b.textContent = "Entrar en VR ahora";
+    b.style.cssText = "padding:16px 34px;font:700 18px system-ui,sans-serif;color:#d6ffe6;background:#0e2a1d;border:2px solid #39d98a;border-radius:10px;cursor:pointer";
+    const s = document.createElement("button");
+    s.textContent = "Volar sin VR";
+    s.style.cssText = "padding:8px 16px;font:14px system-ui,sans-serif;color:#9fd9b8;background:transparent;border:1px solid #2c6b4c;border-radius:8px;cursor:pointer";
+    const err = document.createElement("div");
+    err.style.cssText = "max-width:560px;color:#ffb4a8;min-height:1.2em";
+    const close = () => {
+      ov.remove();
+      if (game) {
+        game.paused = false;
+        game.last = performance.now();
+      }
+    };
+    b.onclick = async () => {
+      err.textContent = "";
+      try {
+        if (game && !game.vr.presenting) {
+          await game.vr.enter(game);
+        }
+        close();
+      } catch (e) {
+        console.error(e);
+        err.textContent = "No se pudo iniciar la VR: " + (e && e.message || e);
+      }
+    };
+    s.onclick = close;
+    ov.append(t, m, b, err, s);
+    document.body.appendChild(ov);
   }
   vrBtn.onclick = async () => {
     try {
