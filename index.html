@@ -95239,9 +95239,9 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
         session.addEventListener("end", () => vr._onEnd(game2));
         vr.lite = /OculusBrowser|Quest/i.test(navigator.userAgent) || new URLSearchParams(location.search).has("lite");
         saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near, far: camera.far, q: { ...game2.scene._q } };
-        renderer.shadowMap.enabled = false;
-        game2.scene.sun.castShadow = false;
         if (vr.lite) {
+          renderer.shadowMap.enabled = false;
+          game2.scene.sun.castShadow = false;
           try {
             game2.scene.setQuality({ viewDistance: 1600, treeDensity: Math.min(saved.q.treeDensity || 1, 0.35), grassDensity: 0, grassDistance: 0, lodK: 1, detail: 0.6, tree3D: 30, rock3D: 20, buildBudget: 1 });
           } catch (e) {
