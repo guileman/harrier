@@ -95207,35 +95207,54 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return vr.supported;
     };
     vr.enter = async (game2) => {
-      if (vr.presenting || !navigator.xr) return false;
-      vr.prepare();
-      const session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
-      saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near, far: camera.far, q: { ...game2.scene._q } };
-      renderer.shadowMap.enabled = false;
-      game2.scene.sun.castShadow = false;
+      if (vr.presenting || vr.entering || !navigator.xr) return false;
+      vr.entering = true;
+      let session = null;
       try {
-        game2.scene.setQuality({ viewDistance: 1600, treeDensity: Math.min(saved.q.treeDensity || 1, 0.35), grassDensity: 0, grassDistance: 0, lodK: 1, detail: 0.6, tree3D: 30, rock3D: 20, buildBudget: 1 });
+        vr.prepare();
+        session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
+        session.addEventListener("end", () => vr._onEnd(game2));
+        vr.lite = /OculusBrowser|Quest/i.test(navigator.userAgent) || new URLSearchParams(location.search).has("lite");
+        saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near, far: camera.far, q: { ...game2.scene._q } };
+        renderer.shadowMap.enabled = false;
+        game2.scene.sun.castShadow = false;
+        if (vr.lite) {
+          try {
+            game2.scene.setQuality({ viewDistance: 1600, treeDensity: Math.min(saved.q.treeDensity || 1, 0.35), grassDensity: 0, grassDistance: 0, lodK: 1, detail: 0.6, tree3D: 30, rock3D: 20, buildBudget: 1 });
+          } catch (e) {
+            console.warn("VR quality", e);
+          }
+          game2.model.setLite && game2.model.setLite(true);
+        }
+        renderer.xr.setFramebufferScaleFactor(vr.lite ? 0.75 : 1);
+        camera.near = 0.1;
+        camera.updateProjectionMatrix();
+        dolly.add(camera);
+        camera.position.set(0, 0, 0);
+        camera.quaternion.identity();
+        await renderer.xr.setSession(session);
+        try {
+          renderer.xr.setFoveation(vr.lite ? 1 : 0.5);
+        } catch {
+        }
+        vr.session = session;
+        vr.presenting = true;
+        hudPlane.visible = true;
+        dolly.visible = true;
+        return true;
       } catch (e) {
-        console.warn("VR quality", e);
+        try {
+          if (session) await session.end();
+        } catch {
+        }
+        try {
+          vr._onEnd(game2);
+        } catch {
+        }
+        throw e;
+      } finally {
+        vr.entering = false;
       }
-      game2.model.setLite && game2.model.setLite(true);
-      renderer.xr.setFramebufferScaleFactor(0.75);
-      camera.near = 0.1;
-      camera.updateProjectionMatrix();
-      dolly.add(camera);
-      camera.position.set(0, 0, 0);
-      camera.quaternion.identity();
-      await renderer.xr.setSession(session);
-      try {
-        renderer.xr.setFoveation(1);
-      } catch {
-      }
-      vr.session = session;
-      vr.presenting = true;
-      hudPlane.visible = true;
-      dolly.visible = true;
-      session.addEventListener("end", () => vr._onEnd(game2));
-      return true;
     };
     vr._onEnd = (game2) => {
       vr.presenting = false;
@@ -95532,7 +95551,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
         g.vrAcc = (g.vrAcc || 0) + dt;
         g.vrN = (g.vrN || 0) + 1;
         g.vr.headWorld(g.focus);
-        if (g.vrN % 3 === 0) {
+        if (!g.vr.lite || g.vrN % 3 === 0) {
           const real = g.scene.camera;
           g.scene.camera = g.vr.lodCamera(real.far);
           g.scene.update(g.vrAcc, g.focus);
