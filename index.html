@@ -95213,7 +95213,23 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       let session = null;
       try {
         vr.prepare();
-        session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
+        try {
+          session = await navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] });
+        } catch (e1) {
+          if (!(e1 && e1.name === "NotSupportedError")) throw e1;
+          let sup = false;
+          try {
+            sup = await navigator.xr.isSessionSupported("immersive-vr");
+          } catch {
+          }
+          try {
+            session = await navigator.xr.requestSession("immersive-vr");
+          } catch (e2) {
+            const err = new Error(e2.message + " [diagn\xF3stico: isSessionSupported(immersive-vr)=" + sup + "]");
+            err.name = e2.name;
+            throw err;
+          }
+        }
         session.addEventListener("end", () => vr._onEnd(game2));
         vr.lite = /OculusBrowser|Quest/i.test(navigator.userAgent) || new URLSearchParams(location.search).has("lite");
         saved = { shadows: renderer.shadowMap.enabled, sunShadow: game2.scene.sun.castShadow, near: camera.near, far: camera.far, q: { ...game2.scene._q } };
