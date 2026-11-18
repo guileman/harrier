@@ -95509,9 +95509,7 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       ui.hideLoading();
       game.last = performance.now();
       scene.renderer.setAnimationLoop(loop);
-      vr.checkSupport().then((ok) => {
-        if (ok && game && game.vr === vr) vrBtn.style.display = "block";
-      });
+      showVrButton();
     } catch (e) {
       console.error(e);
       ui.toast("Error al generar el mundo: " + (e && e.message || e), 8e3);
@@ -95576,6 +95574,27 @@ float rvn(vec3 p){ vec3 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
   var vrBtn = document.createElement("button");
   vrBtn.textContent = "Entrar en VR";
   vrBtn.style.cssText = "display:none;position:fixed;right:18px;bottom:18px;z-index:50;padding:12px 20px;font:600 15px system-ui,sans-serif;color:#d6ffe6;background:#0e2a1d;border:1px solid #39d98a;border-radius:8px;cursor:pointer;pointer-events:auto";
+  var xrWatching = false;
+  function showVrButton() {
+    if (!navigator.xr) return;
+    vrBtn.style.display = "block";
+    const upd = () => {
+      if (!game || !game.vr) return;
+      game.vr.checkSupport().then((ok) => {
+        vrBtn.textContent = ok ? "Entrar en VR" : "Entrar en VR (visor no detectado)";
+        vrBtn.style.opacity = ok ? "1" : "0.75";
+      });
+    };
+    upd();
+    if (!xrWatching) {
+      xrWatching = true;
+      try {
+        navigator.xr.addEventListener("devicechange", upd);
+      } catch {
+      }
+      setInterval(upd, 4e3);
+    }
+  }
   vrBtn.onclick = async () => {
     try {
       if (game && !game.vr.presenting) {
